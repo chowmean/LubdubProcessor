@@ -1,4 +1,5 @@
-*settings.py*
+*config.py
+*settings.py
 .installed.cfg
 bin
 develop-eggs
