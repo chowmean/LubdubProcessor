@@ -18,7 +18,11 @@ def submit(request):
 		else:
 			if data["api_access_token"]!=CLIENT_ACCESS_TOKEN[SERVICE_NAME]:
 				return HttpResponseForbidden(json.dumps({"message":"permissions error"}))
-		content_json = process_process_stat(data["content"])
+		if data["type"] == "CPU PROCESS":
+			content_json = process_process_stat(data["content"])
+		if data["type"] == "CPU":
+			content_json = process_cpu_stat(data["content"])
+			print(content_json)
 		content_json["hostname"] = data["hostname"]
 		content_json["id"] = data["id"]
 		content_json["service"] = SERVICE_NAME
@@ -45,4 +49,39 @@ def process_process_stat(content):
 		line = line.strip()
 		if not line:continue
 		data[line.split(":")[0]] = line.split(":")[1].strip()
+	return data
+
+def process_cpu_stat(content):
+	data = {}
+	i=-1
+	for line in content.splitlines():
+		if line.startswith('cpu'):
+			index = ""
+			cpu = line.split(" ")
+			if i>=0:
+				index = "cpu"+str(i)
+			else:
+				index = "cpu"
+			data[index] = {}
+			data[index]["user_process"] = cpu[1].strip()
+			data[index]["niced_process"] = cpu[2].strip()
+			data[index]["system_process"] = cpu[3].strip()
+			data[index]["idle"] = cpu[4].strip()
+			data[index]["io_wait"] = cpu[5].strip()
+			data[index]["process_hard_intr"] = cpu[6].strip()
+			data[index]["process_soft_intr"] = cpu[7].strip()
+			i=i+1
+			
+		elif line.startswith('intr'):
+			pass
+		elif line.startswith('ctxt'):
+			data["context_switch"] = line.split(" ")[1].strip()
+		elif line.startswith('btime'):
+			data["uptime_epoch"] = line.split(" ")[1].strip()
+		elif line.startswith('processes'):
+			data["process_threads"] = line.split(" ")[1].strip()
+		elif line.startswith('procs_running'):
+			data["running_process"] = line.split(" ")[1].strip()
+		elif line.startswith('procs_blocked'):
+			data["blocked_process"] = line.split(" ")[1].strip()
 	return data
