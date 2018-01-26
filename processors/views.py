@@ -22,7 +22,8 @@ def submit(request):
 			content_json = process_process_stat(data["content"])
 		if data["type"] == "CPU":
 			content_json = process_cpu_stat(data["content"])
-			print(content_json)
+		if data["type"] == "MEMORY":
+                        content_json = process_memory_info(data["content"])	
 		content_json["hostname"] = data["hostname"]
 		content_json["id"] = data["id"]
 		content_json["service"] = SERVICE_NAME
@@ -47,11 +48,23 @@ def get_cpu_info(request):
 		data=[]
 		for stats in cpu_stats:
 			stats.pop('_id')
-			stats["datetime"]=stats["datetime"].strftime('%m/%d/%Y')
+			stats["datetime"]=stats["datetime"].strftime('%H:%M:%S %m/%d/%Y')
 			data.append(stats)
 		return HttpResponse(json.dumps({"data":data}))
 
+
+def get_proc_info(request):
+	return "hello"
+
 def process_process_stat(content):
+	data = {}
+	for line in content.splitlines():
+		line = line.strip()
+		if not line:continue
+		data[line.split(":")[0]] = line.split(":")[1].strip()
+	return data
+
+def process_memory_info(content):
 	data = {}
 	for line in content.splitlines():
 		line = line.strip()
