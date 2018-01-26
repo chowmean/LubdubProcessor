@@ -40,8 +40,16 @@ def get_cpu_info(request):
 	if request.method != "GET":
 		return HttpResponseForbidden(json.dumps({"message":"method not allowed"}))
 	else:
-		return "hello"
-		
+		client = MongoClient()
+		db = client['lubdub']
+		cpu_procs = db.cpu_procs
+		cpu_stats = cpu_procs.find({"service":SERVICE_NAME,"type":"CPU"})
+		data=[]
+		for stats in cpu_stats:
+			stats.pop('_id')
+			stats["datetime"]=stats["datetime"].strftime('%m/%d/%Y')
+			data.append(stats)
+		return HttpResponse(json.dumps({"data":data}))
 
 def process_process_stat(content):
 	data = {}
