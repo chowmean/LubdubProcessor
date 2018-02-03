@@ -44,12 +44,21 @@ def get_info(request,stype="CPU"):
 		client = MongoClient()
 		db = client['lubdub']
 		cpu_procs = db.cpu_procs
-		cpu_stats = cpu_procs.find({"service":SERVICE_NAME,"type":stype})
+		hosts = cpu_procs.find({"service":SERVICE_NAME}).distinct('hostname')
 		data=[]
-		for stats in cpu_stats:
-			stats.pop('_id')
-			stats["datetime"]=stats["datetime"].strftime('%H:%M:%S %m/%d/%Y')
-			data.append(stats)
+		for host in hosts:
+			host_data = {}
+			cpu_stats = cpu_procs.find({"service":SERVICE_NAME,"type":"CPU","hostname":host}).sort([("datetime",-1)]).limit(1)
+			for stats in cpu_stats:
+				stats.pop('_id')
+				stats["datetime"]=stats["datetime"].strftime('%H:%M:%S %m/%d/%Y')
+				host_data["cpu"] = stats
+			memory_stats = cpu_procs.find({"service":SERVICE_NAME,"type":"MEMORY","hostname":host}).sort([("datetime",-1)]).limit(1)
+			for stats in memory_stats:
+				stats.pop('_id')
+				stats["datetime"]=stats["datetime"].strftime('%H:%M:%S %m/%d/%Y')
+				host_data["memory"] = stats
+			data.append({"hostname":host,"data":host_data})
 		return HttpResponse(json.dumps({"data":data}))
 
 
@@ -79,22 +88,20 @@ def process_memory_info(content):
 def process_cpu_stat(content):
 	data = {}
 	i=-1
+	data['cpu']={}
 	for line in content.splitlines():
 		if line.startswith('cpu'):
 			index = ""
 			cpu = line.split(" ")
-			if i>=0:
-				index = "cpu"+str(i)
-			else:
-				index = "cpu"
-			data[index] = {}
-			data[index]["user_process"] = cpu[1].strip()
-			data[index]["niced_process"] = cpu[2].strip()
-			data[index]["system_process"] = cpu[3].strip()
-			data[index]["idle"] = cpu[4].strip()
-			data[index]["io_wait"] = cpu[5].strip()
-			data[index]["process_hard_intr"] = cpu[6].strip()
-			data[index]["process_soft_intr"] = cpu[7].strip()
+			cpu_dict = {}	
+			cpu_dict["user_process"] = cpu[1].strip()
+			cpu_dict["niced_process"] = cpu[2].strip()
+			cpu_dict["system_process"] = cpu[3].strip()
+			cpu_dict["idle"] = cpu[4].strip()
+			cpu_dict["io_wait"] = cpu[5].strip()
+			cpu_dict["process_hard_intr"] = cpu[6].strip()
+			cpu_dict["process_soft_intr"] = cpu[7].strip()
+			data['cpu']["cpu"+str(i)]=cpu_dict
 			i=i+1
 			
 		elif line.startswith('intr'):
